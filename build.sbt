@@ -23,3 +23,5 @@ libraryDependencies ++= Seq(
 )
 
 enablePlugins(AssemblyPlugin)
+
+assemblyJarName in assembly := s"${name.value}-v${version.value}.jar"
