@@ -1,72 +1,53 @@
 package io.github.webuilt.jasperserver
 
+import java.io.ByteArrayOutputStream
+import java.sql.DriverManager
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import tethys._
-import tethys.derivation.auto._
-import tethys.jackson._
+import io.github.webuilt.sjdbc.MyDriver
+import net.sf.jasperreports.engine.export.JRPdfExporter
+import net.sf.jasperreports.engine.{JasperCompileManager, JasperFillManager, JasperPrint}
+import net.sf.jasperreports.export.{SimpleExporterInput, SimpleOutputStreamExporterOutput}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
-import scala.io.StdIn
+import scala.util.{Try, Using}
 
-object ServerMain extends App
-{
-
+object ServerMain extends App {
   implicit val system: ActorSystem = ActorSystem("my-system")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  // needed for the future flatMap/onComplete in the end
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-
-  case class MyHeader(name: String, value: String, renderInRequests: Boolean)
-    extends akka.http.scaladsl.model.headers.CustomHeader
-  {
-    override def renderInResponses(): Boolean = !renderInRequests
-  }
-  case class C4User(
-    srcId: String,
-    firstName: String,
-    lastName: String,
-    username: String,
-    role: String,
-    company: String,
-  )
-  val route: Route =
-    path("hello") {
+  val driverCP = "io.github.webuilt.sjdbc.MyDriver"
+  val authStringOpt: Option[String] = for {
+    authFilePath <- sys.env.get("C4_JRAUTH")
+    auth <- Using.resource(scala.io.Source.fromFile(authFilePath))(_.getLines.nextOption())
+  } yield auth
+  val jdbcUrl = authStringOpt.getOrElse("jdbc:my:url=https://syncpost.dev.cone.ee/cto-tests-http username=cto") //getOrElse("jdbc:my:url=http://cto-syncpost:1080/cto-tests-http username=cto")
+  def driverInit(): Boolean = Try(MyDriver.getClass).isSuccess
+  lazy val conn: java.sql.Connection = if (driverInit()) DriverManager.getConnection(jdbcUrl)
+                                       else throw new Exception("couldnt connect to db")
+  val jrRoute: Route =
+    path("jr") {
       get {
         complete {
-          val usersRequest = Http(system)
-            .singleRequest(
-              HttpRequest(
-                method = HttpMethods.POST,
-                uri = "https://syncpost.dev.cone.ee/cto-tests-http",
-                headers = MyHeader("query", "users", renderInRequests = true) :: Nil
-              )
-            )
-          usersRequest.map {
-            response =>
-              val userHeader = response.headers.find(_.lowercaseName == "users")
-              val jsonParsed = userHeader.flatMap(_.value.jsonAs[Seq[C4User]].toOption)
-              val htmlString =
-                jsonParsed
-                  .toList
-                  .flatten
-                  .mkString("<h1>howdy</h1><br/><ul><li>", "</li><li>", "</li></ul>")
-              HttpEntity(
-                ContentTypes.`text/html(UTF-8)`,
-                htmlString
-              )
-          }
-
+          val jpr: JasperPrint = JasperFillManager
+            .fillReport(JasperCompileManager.compileReport("vone.jrxml"), new java.util.HashMap[String, Object](), conn)
+          val exporter: JRPdfExporter = new JRPdfExporter()
+          exporter.setExporterInput(new SimpleExporterInput(jpr))
+          val outs: ByteArrayOutputStream = new java.io.ByteArrayOutputStream()
+          exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(outs))
+          exporter.exportReport()
+          val bytes: Array[Byte] = outs.toByteArray
+          HttpResponse(entity = HttpEntity(bytes))
         }
       }
     }
-  val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(route, "localhost", 8080)
-  println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
-  StdIn.readLine() // let it run until user presses return
+  val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(jrRoute, "localhost", 8080)
+  while (true) ()
   bindingFuture
     .flatMap(_.unbind()) // trigger unbinding from the port
     .onComplete(_ => system.terminate()) // and shutdown when done

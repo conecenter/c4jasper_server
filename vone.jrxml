@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.9.0.final using JasperReports Library version 6.9.0-cb8f9004be492ccc537180b49c026951f4220bf3  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="vone" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="2e33cab0-f372-4711-af62-4a0146e68daf">
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="New Data Adapter "/>
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<queryString>
+		<![CDATA[users]]>
+	</queryString>
+	<field name="srcId" class="java.lang.String">
+		<property name="net.sf.jasperreports.sql.field.column.index" value="1"/>
+		<property name="net.sf.jasperreports.sql.field.column.name" value="srcId"/>
+		<property name="net.sf.jasperreports.sql.field.column.label" value="srcId"/>
+	</field>
+	<field name="First Name" class="java.lang.String">
+		<property name="net.sf.jasperreports.sql.field.column.name" value="firstName"/>
+		<property name="net.sf.jasperreports.sql.field.column.label" value="firstName"/>
+		<property name="net.sf.jasperreports.sql.field.column.index" value="2"/>
+	</field>
+	<field name="Last Name" class="java.lang.String">
+		<property name="net.sf.jasperreports.sql.field.column.index" value="3"/>
+		<property name="net.sf.jasperreports.sql.field.column.label" value="lastName"/>
+		<property name="net.sf.jasperreports.sql.field.column.name" value="lastName"/>
+	</field>
+	<field name="Username" class="java.lang.String">
+		<property name="net.sf.jasperreports.sql.field.column.name" value="username"/>
+		<property name="net.sf.jasperreports.sql.field.column.label" value="username"/>
+		<property name="net.sf.jasperreports.sql.field.column.index" value="4"/>
+	</field>
+	<field name="Role" class="java.lang.String">
+		<property name="net.sf.jasperreports.sql.field.column.index" value="5"/>
+		<property name="net.sf.jasperreports.sql.field.column.name" value="role"/>
+		<property name="net.sf.jasperreports.sql.field.column.label" value="role"/>
+	</field>
+	<field name="Company" class="java.lang.String">
+		<property name="net.sf.jasperreports.sql.field.column.name" value="company"/>
+		<property name="net.sf.jasperreports.sql.field.column.label" value="company"/>
+		<property name="net.sf.jasperreports.sql.field.column.index" value="6"/>
+	</field>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="50" splitType="Stretch">
+			<staticText>
+				<reportElement x="230" y="10" width="100" height="30" uuid="668e75ce-2e60-4771-b8ec-ff80924eff9b"/>
+				<textElement textAlignment="Center"/>
+				<text><![CDATA[Users from system]]></text>
+			</staticText>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="15" splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="21" splitType="Stretch">
+			<staticText>
+				<reportElement x="0" y="0" width="111" height="21" uuid="e4d792df-456c-4326-820f-a4801669ed3b">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="e34b413c-ff90-4ed1-a19a-f495dab0da6a"/>
+				</reportElement>
+				<text><![CDATA[First Name]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="111" y="0" width="111" height="21" uuid="9cdb66a3-3596-4cdb-b554-37c5b85d3a1d">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="fe26212e-0c1d-4536-b434-ffefc0f95ef1"/>
+				</reportElement>
+				<text><![CDATA[Last Name]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="222" y="0" width="111" height="21" uuid="3d10656f-a5af-4784-bab9-dacc1746d5fc">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="c1d7ce4c-d275-44a3-9ccb-6a74c40c0f4d"/>
+				</reportElement>
+				<text><![CDATA[Username]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="333" y="0" width="111" height="21" uuid="36a97709-a717-4a29-be5c-cdf0d436d1ba">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="dbbe3c51-a65b-474a-aa3d-4eeccbb07833"/>
+				</reportElement>
+				<text><![CDATA[Role]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="444" y="0" width="111" height="21" uuid="14bfa41f-65a3-4949-ade1-7e8910851f6c">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="6779cf9f-4275-4ea5-8a41-b6866fa85442"/>
+				</reportElement>
+				<text><![CDATA[Company]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="33" splitType="Stretch">
+			<textField>
+				<reportElement x="0" y="0" width="111" height="30" uuid="bb2e1918-3afb-4f38-8a06-f140da46bbe8">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="e34b413c-ff90-4ed1-a19a-f495dab0da6a"/>
+				</reportElement>
+				<textFieldExpression><![CDATA[$F{First Name}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="111" y="0" width="111" height="30" uuid="784160f4-b3c0-40d8-93b1-b9b76945e81c">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="fe26212e-0c1d-4536-b434-ffefc0f95ef1"/>
+				</reportElement>
+				<textFieldExpression><![CDATA[$F{Last Name}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="222" y="0" width="111" height="30" uuid="53b8025d-3716-4b01-adb9-89df283a37fd">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="c1d7ce4c-d275-44a3-9ccb-6a74c40c0f4d"/>
+				</reportElement>
+				<textFieldExpression><![CDATA[$F{Username}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="333" y="0" width="111" height="30" uuid="fe3672ff-f1c2-49cb-912e-3f56fc72ec9d">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="dbbe3c51-a65b-474a-aa3d-4eeccbb07833"/>
+				</reportElement>
+				<textFieldExpression><![CDATA[$F{Role}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="444" y="0" width="111" height="30" uuid="427f9566-9734-4c19-99e9-3f8f61300ce8">
+					<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="6779cf9f-4275-4ea5-8a41-b6866fa85442"/>
+				</reportElement>
+				<textFieldExpression><![CDATA[$F{Company}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="8" splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="10" splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band height="12" splitType="Stretch"/>
+	</summary>
+</jasperReport>
