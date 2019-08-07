@@ -56,7 +56,7 @@ object ServerMain extends App with ImplicitLazyLogging
         }
       }
     }
-  val (interface, port) = "" -> 9080
+  val (interface, port) = "0.0.0.0" -> 1080
   val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(jrRoute, interface, port)
   info"successfully binded port $port\nwaiting to requests"
   while (true) () //todo stop possibility

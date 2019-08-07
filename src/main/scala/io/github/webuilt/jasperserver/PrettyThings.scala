@@ -36,14 +36,14 @@ object PrettyImplicits
               key -> value
           }
       }
-    def apply(configFile: File): Config =
+/*    def apply(configFile: File): Config =
       Config(
         map = Using.resource(Source.fromFile(configFile)) {
           _.getLines.collect(splitByEq)
         }.toMap
       )
     def apply(configFilePath: Path): Config = apply(configFilePath.toFile)
-    def apply(configFileLocation: String): Config = apply(Path.of(configFileLocation))
+    def apply(configFileLocation: String): Config = apply(new Path(configFileLocation))*/
     def fromEnv: Config = Config(sys.env)
   }
 }
