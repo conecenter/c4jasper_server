@@ -37,7 +37,7 @@ object ServerMain extends App with ImplicitLazyLogging
   else throw new Exception("couldnt connect to db")
   info"connected to $dbUrl"
   val jrRoute: Route =
-    path("jr") {
+    path("jr.pdf") {
       get {
         complete {
           info"request for report received"
