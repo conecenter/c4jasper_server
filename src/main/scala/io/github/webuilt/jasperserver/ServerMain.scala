@@ -63,9 +63,8 @@ object ServerMain extends App with ImplicitLazyLogging {
                         pMap.toList.foreach {
                           case (k, v) =>
                             paramsMap.put(k, v)
-                            properties.put(k, v)
+                            //properties.put(k, v)
                         }
-                        properties.forEach((t: Any, u: Any) => println(t.toString -> u.toString))
 
                         val jpr: JasperPrint = JasperFillManager
                           .fillReport(JasperCompileManager.compileReport(s"./reports/$reportName.jrxml"),
