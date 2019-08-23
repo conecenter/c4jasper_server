@@ -25,3 +25,8 @@ libraryDependencies ++= Seq(
 enablePlugins(AssemblyPlugin)
 
 assemblyJarName in assembly := s"${name.value}-v${version.value}.jar"
+
+assemblyMergeStrategy in assembly := {
+  case PathList(xs@_*) if xs.exists(_.contains("jasperreports_extension.properties")) => MergeStrategy.concat
+  case x => (assemblyMergeStrategy in assembly).value(x)
+}

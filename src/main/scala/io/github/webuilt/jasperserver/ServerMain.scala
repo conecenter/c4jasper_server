@@ -29,8 +29,8 @@ object ServerMain extends App with ImplicitLazyLogging {
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   debug"Akka is prepared"
   val config = Config.fromEnv
-  val driverCP = config.get("driver").getOrElse("io.github.webuilt.sjdbc.MyDriver")
-  val dbUrl = config.get("dburl")
+  val driverCP = "io.github.webuilt.sjdbc.MyDriver"
+  val dbUrl = config.get("C4_SPJR")
     .getOrElse("jdbc:my:url=https://syncpost.dev.cone.ee/cto-tests-http")
   debug"loaded DB configuration: [$dbUrl] with driver: $driverCP"
   lazy val driverInit: Boolean = Try(MyDriver.getClass).isSuccess
