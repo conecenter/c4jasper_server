@@ -45,6 +45,49 @@ object ServerMain extends App with ImplicitLazyLogging {
   info"connected to $dbUrl"
   val reportRegex = """([\w\d_-]*)\.pdf""".r
   val reportRegexInner = """(.*)\.pdf\?(.*)""".r
+  val requestRoute: Route =
+    pathPrefix("request") {
+      path(".*".r) {
+        repName =>
+          post {
+            request: RequestContext =>
+              request.complete {
+                info"request for report received"
+                val response = {
+                  val paramsMap = new java.util.HashMap[String, Object]()
+                  val properties = new java.util.Properties()
+                  request.request.headers.toList.foreach {
+                    header =>
+                      paramsMap.put(header.name, header.value)
+                    //properties.put(k, v)
+                  }
+
+                  val jpr: JasperPrint = JasperFillManager
+                    .fillReport(JasperCompileManager.compileReport(s"./reports/$repName.jrxml"),
+                      paramsMap, conn(properties)
+                    )
+                  info"report compiled and filled"
+                  val exporter: JRPdfExporter = new JRPdfExporter()
+                  exporter.setExporterInput(new SimpleExporterInput(jpr))
+                  val outs: ByteArrayOutputStream = new java.io.ByteArrayOutputStream()
+                  exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(outs))
+                  exporter.exportReport()
+                  outs.toByteArray
+                }
+                info"sending completed report back"
+                Http(system).singleRequest(HttpRequest(
+                  method = HttpMethods.POST,
+                  uri = dbUrl.replaceFirst("jdbc:my:url=", "").split("/").init.mkString("/") + "/jasper-report",
+                  headers = request.request.headers.find(_.name.toLowerCase == "replyid").toList,
+                  entity = HttpEntity(response),
+                ))
+                HttpResponse(status = StatusCodes.OK,
+                  entity = HttpEntity(response)
+                )
+              }
+          }
+      }
+    }
   val reportRoute: Route =
     pathPrefix("report") {
       concat(
@@ -199,7 +242,7 @@ object ServerMain extends App with ImplicitLazyLogging {
       )
     }
   val (interface, port) = "0.0.0.0" -> 1080
-  val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(jrRoute ~ storeReportRoute ~ reportsListRoute ~ reportRoute, interface, port)
+  val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(requestRoute ~ jrRoute ~ storeReportRoute ~ reportsListRoute ~ reportRoute, interface, port)
   info"successfully binded port $port\nwaiting to requests"
   // while (true) () //todo stop possibility
   StdIn.readLine()
