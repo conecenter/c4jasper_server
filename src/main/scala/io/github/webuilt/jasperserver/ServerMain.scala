@@ -244,6 +244,64 @@ object ServerMain extends App with ImplicitLazyLogging {
         }
       )
     }
+  val downloatTemplateRoute: Route =
+    pathPrefix("templates") {
+      concat(
+        path(storeReportRegex) {
+          reportName =>
+            post {
+              request: RequestContext =>
+                request.complete {
+                  info"request for template received for $reportName"
+                  val filePath = Paths.get(s"./reports/$reportName")
+                  val fileContent = Files.readAllBytes(filePath)
+                  info"file $reportName found"
+                  Http().singleRequest(HttpRequest(
+                    method = HttpMethods.POST,
+                    uri = hostUrl + "/jasper-template",
+                    headers = request.request.headers.find(_.name.toLowerCase == "replyid").toList,
+                    entity = HttpEntity(fileContent),
+                  )
+                  )
+                  info"successfully replied"
+                  HttpResponse(status = StatusCodes.OK,
+                    entity = HttpEntity(fileContent)
+                  )
+                }
+            }
+        },
+        pathEndOrSingleSlash {
+          post {
+            request =>
+              info"templates list request received"
+              val d = new File("./reports")
+              val fileList =
+                if (d.exists && d.isDirectory)
+                  d.listFiles.filter(_.isFile).toList
+                else
+                  List[File]()
+              info"sending response to templates list to ${hostUrl + "/jasper-templates-list"}"
+              Http().singleRequest(
+                HttpRequest(
+                  HttpMethods.POST,
+                  hostUrl + "/jasper-templates-list",
+                  request.request.headers.find(_.name.equalsIgnoreCase("replyid")).toList,
+                  HttpEntity(fileList.map(f => s"filename=${f.getName}&modified=${f.lastModified}").mkString("\n").getBytes("UTF-8"))
+                )
+              )
+              info"response sent"
+              request.complete(
+                HttpResponse(
+                  status = StatusCodes.OK,
+                  entity = HttpEntity(
+                    fileList.foldLeft("")(_ + _.getName)
+                  )
+                )
+              )
+          }
+        }
+      )
+    }
   val (interface, port) = "0.0.0.0" -> 1080
   val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(
     requestRoute ~ jrRoute ~ storeReportRoute ~ reportsListRoute ~ reportRoute ~ downloatTemplateRoute,
