@@ -27,7 +27,7 @@ object ServerMain extends App with ImplicitLazyLogging {
   // regexes
   val jrxmlR = """(.*)\.jrxml""".r
   val pdfR = """(.*)\.pdf""".r
-  val dbUrlExtractR = """jdbc:my:url=(.*)&user=(.*)""".r
+  val dbUrlExtractR = """jdbc:my:url=(.*) user=(.*)""".r
   // akka
   info"Starting Jasper Server App"
   debug"Preparing Akka ecosystem"
@@ -40,12 +40,12 @@ object ServerMain extends App with ImplicitLazyLogging {
   val dbUrlRaw = config
     .get("C4SPJR")
     .orElse(config.get("C4_SPJR"))
-    .getOrElse("jdbc:my:url=https://syncpost.dev.cone.ee&user=ase")
+    .getOrElse("jdbc:my:url=https://syncpost.dev.cone.ee user=ase")
   val dbUrlExtractR(hostUrlRaw, user) = dbUrlRaw
   val hostUrl: String = if (hostUrlRaw.lastOption.contains('/'))
                           hostUrlRaw.init
                         else hostUrlRaw
-  val dbUrl = s"jdbc:my:url=$hostUrl/cto-tests-http&user=$user"
+  val dbUrl = s"jdbc:my:url=$hostUrl/cto-tests-http user=$user"
   debug"loaded DB configuration: [$dbUrl] with driver: $driverCP"
   lazy val driverInit: Boolean = Try(MyDriver.getClass).isSuccess
   info"driver$driverCP is ${
