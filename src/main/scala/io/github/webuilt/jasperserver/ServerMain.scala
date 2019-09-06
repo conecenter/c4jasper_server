@@ -19,6 +19,7 @@ import net.sf.jasperreports.export.{SimpleExporterInput, SimpleOutputStreamExpor
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.io.StdIn
+import scala.util.matching.Regex
 import scala.util.{Try, Using}
 
 object ServerMain extends App with ImplicitLazyLogging {
@@ -32,6 +33,7 @@ object ServerMain extends App with ImplicitLazyLogging {
   val driverCP = "io.github.webuilt.sjdbc.MyDriver"
   val dbUrl = config.get("C4_SPJR")
     .getOrElse("jdbc:my:url=https://syncpost.dev.cone.ee/cto-tests-http")
+  val hostUrl: String = dbUrl.replaceFirst("jdbc:my:url=", "").split("/").init.mkString("/")
   debug"loaded DB configuration: [$dbUrl] with driver: $driverCP"
   lazy val driverInit: Boolean = Try(MyDriver.getClass).isSuccess
   info"driver$driverCP is ${
@@ -77,10 +79,11 @@ object ServerMain extends App with ImplicitLazyLogging {
                 info"sending completed report back"
                 Http(system).singleRequest(HttpRequest(
                   method = HttpMethods.POST,
-                  uri = dbUrl.replaceFirst("jdbc:my:url=", "").split("/").init.mkString("/") + "/jasper-report",
+                  uri = hostUrl + "/jasper-report",
                   headers = request.request.headers.find(_.name.toLowerCase == "replyid").toList,
                   entity = HttpEntity(response),
-                ))
+                )
+                )
                 HttpResponse(status = StatusCodes.OK,
                   entity = HttpEntity(response)
                 )
@@ -106,7 +109,7 @@ object ServerMain extends App with ImplicitLazyLogging {
                         pMap.toList.foreach {
                           case (k, v) =>
                             paramsMap.put(k, v)
-                            //properties.put(k, v)
+                          //properties.put(k, v)
                         }
 
                         val jpr: JasperPrint = JasperFillManager
@@ -242,7 +245,10 @@ object ServerMain extends App with ImplicitLazyLogging {
       )
     }
   val (interface, port) = "0.0.0.0" -> 1080
-  val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(requestRoute ~ jrRoute ~ storeReportRoute ~ reportsListRoute ~ reportRoute, interface, port)
+  val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(
+    requestRoute ~ jrRoute ~ storeReportRoute ~ reportsListRoute ~ reportRoute ~ downloatTemplateRoute,
+    interface, port
+  )
   info"successfully binded port $port\nwaiting to requests"
   // while (true) () //todo stop possibility
   StdIn.readLine()
