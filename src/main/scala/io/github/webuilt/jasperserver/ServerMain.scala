@@ -127,7 +127,7 @@ object ServerMain extends App with ImplicitLazyLogging {
                   HttpMethods.POST,
                   hostUrl + "/jasper-templates-list",
                   request.request.headers.find(_.name.equalsIgnoreCase("replyid")).toList,
-                  HttpEntity(fileList.map(f => s"filename=${f.getName}&modified=${f.lastModified}").mkString("\n").getBytes("UTF-8"))
+                  HttpEntity(fileList.filter(_.getName.endsWith(".jrxml")).map(f => s"filename=${f.getName}&modified=${f.lastModified}").mkString("\n").getBytes("UTF-8"))
                 )
               )
               info"response sent"
@@ -176,6 +176,8 @@ object ServerMain extends App with ImplicitLazyLogging {
                       Using.resource(new PrintWriter(new File(s"./reports/$reportName.jrxml"))) {
                         _.write(body)
                       }
+                      JasperCompileManager.compileReportToFile(s"./reports/$reportName.jrxml", s"./reports/$reportName.jasper")
+                      JasperCompileManager.compileReportToFile(s"./reports/$reportName.jrxml", s"./$reportName.jasper")
                       HttpResponse(status = StatusCodes.Created)
                     }
                     _ = info"new report stored"
