@@ -45,7 +45,7 @@ object ServerMain extends App with ImplicitLazyLogging {
   val hostUrl: String = if (hostUrlRaw.lastOption.contains('/'))
                           hostUrlRaw.init
                         else hostUrlRaw
-  val dbUrl = s"jdbc:my:url=$hostUrl/cto-tests-http user=$user"
+  val dbUrl = s"jdbc:my:url=$hostUrl/jasper-data-req user=$user"
   debug"loaded DB configuration: [$dbUrl] with driver: $driverCP"
   lazy val driverInit: Boolean = Try(MyDriver.getClass).isSuccess
   info"driver$driverCP is ${
