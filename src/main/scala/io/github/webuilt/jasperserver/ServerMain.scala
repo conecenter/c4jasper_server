@@ -1,6 +1,6 @@
 package io.github.webuilt.jasperserver
 
-import java.io.{ByteArrayOutputStream, File, PrintWriter}
+import java.io.{ByteArrayOutputStream, DataOutputStream, File, FileOutputStream, ObjectOutputStream, PrintWriter}
 import java.nio.file.{Files, Paths}
 import java.sql.DriverManager
 import java.util
@@ -13,10 +13,13 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{RequestContext, Route}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{FileIO, Source}
+import akka.util.ByteString
 import io.github.webuilt.jasperserver.PrettyImplicits._
 import io.github.webuilt.sjdbc.MyDriver
 import net.sf.jasperreports.engine.export.JRPdfExporter
-import net.sf.jasperreports.engine.{JasperCompileManager, JasperFillManager, JasperPrint}
+import net.sf.jasperreports.engine.util.JRSaver
+import net.sf.jasperreports.engine.{JasperCompileManager, JasperFillManager, JasperPrint, JasperReport}
 import net.sf.jasperreports.export.{SimpleExporterInput, SimpleOutputStreamExporterOutput}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -27,7 +30,7 @@ object ServerMain extends App with ImplicitLazyLogging {
   // regexes
   val jrxmlR = """(.*)\.jrxml""".r
   val pdfR = """(.*)\.pdf""".r
-  val dbUrlExtractR = """jdbc:my:url=(.*) user=(.*)""".r
+  val dbUrlExtractR = """jdbc:my:url=(.*)""".r
   // akka
   info"Starting Jasper Server App"
   debug"Preparing Akka ecosystem"
@@ -40,12 +43,12 @@ object ServerMain extends App with ImplicitLazyLogging {
   val dbUrlRaw = config
     .get("C4SPJR")
     .orElse(config.get("C4_SPJR"))
-    .getOrElse("jdbc:my:url=https://syncpost.dev.cone.ee user=ase")
-  val dbUrlExtractR(hostUrlRaw, user) = dbUrlRaw
+    .getOrElse("jdbc:my:url=https://syncpost.dev.cone.ee")
+  val dbUrlExtractR(hostUrlRaw) = dbUrlRaw
   val hostUrl: String = if (hostUrlRaw.lastOption.contains('/'))
                           hostUrlRaw.init
                         else hostUrlRaw
-  val dbUrl = s"jdbc:my:url=$hostUrl/jasper-data-req user=$user"
+  val dbUrl = s"jdbc:my:url=$hostUrl/jasper-data-req"
   debug"loaded DB configuration: [$dbUrl] with driver: $driverCP"
   lazy val driverInit: Boolean = Try(MyDriver.getClass).isSuccess
   info"driver$driverCP is ${
@@ -53,8 +56,9 @@ object ServerMain extends App with ImplicitLazyLogging {
     else "not "
   }initialized"
   def conn(
-    props: java.util.Properties = new java.util.Properties()
-  ): java.sql.Connection = if (driverInit) DriverManager.getConnection(dbUrl, props)
+    username: String,
+    props: java.util.Properties = new java.util.Properties(),
+  ): java.sql.Connection = if (driverInit) DriverManager.getConnection(s"$dbUrl user=$username", props)
                            else throw new Exception("couldn't connect to db")
   info"connected to $dbUrl"
   val reportRoute: Route =
@@ -79,11 +83,12 @@ object ServerMain extends App with ImplicitLazyLogging {
                     .toList.foreach { header =>
                     connectionProperties.put(header.name, header.value)
                   }
+                  val username = request.request.headers.find(_.name.equalsIgnoreCase("user")).map(_.value).getOrElse("")
                   val jpr: JasperPrint =
                     JasperFillManager.fillReport(
                       JasperCompileManager.compileReport(s"./reports/$repName.jrxml"),
                       reportParameters,
-                      conn(connectionProperties)
+                      conn(username = username, connectionProperties)
                     )
                   info"report compiled and filled"
                   val exporter: JRPdfExporter = new JRPdfExporter()
@@ -134,9 +139,6 @@ object ServerMain extends App with ImplicitLazyLogging {
               request.complete(
                 HttpResponse(
                   status = StatusCodes.OK,
-                  entity = HttpEntity(
-                    fileList.foldLeft("")(_ + _.getName)
-                  )
                 )
               )
           }
@@ -176,8 +178,29 @@ object ServerMain extends App with ImplicitLazyLogging {
                       Using.resource(new PrintWriter(new File(s"./reports/$reportName.jrxml"))) {
                         _.write(body)
                       }
-                      JasperCompileManager.compileReportToFile(s"./reports/$reportName.jrxml", s"./reports/$reportName.jasper")
-                      JasperCompileManager.compileReportToFile(s"./reports/$reportName.jrxml", s"./$reportName.jasper")
+                      val comp1 = Try(JasperCompileManager.compileReportToFile(s"./reports/$reportName.jrxml"))
+                      val comp2 = Try(JasperCompileManager.compileReportToFile(s"./reports/$reportName.jrxml", s"./reports/$reportName.jasper"))
+                      val d = new File("./reports")
+                      val fileList =
+                        if (d.exists && d.isDirectory)
+                          d.listFiles.filter(_.isFile).toList
+                        else
+                          List[File]()
+                      fileList.foreach(println)
+                      println(comp1)
+                      println(comp2)
+                      /*val compiledReport: JasperReport = JasperCompileManager.compileReport(s"./reports/$reportName.jrxml")
+                      val f1 = new File(s"./reports/$reportName.jasper")
+                      f1.setReadable(true)
+                      f1.setWritable(true)
+                      val f2 = new File(s"./$reportName.jasper")
+                      f2.setReadable(true)
+                      f2.setWritable(true)
+                      Using.resources(new ObjectOutputStream(new FileOutputStream(f1)), new ObjectOutputStream(new FileOutputStream(f2))) {
+                        (p1, p2) =>
+                          p1.writeObject(compiledReport)
+                          p2.writeObject(compiledReport)
+                      }*/
                       HttpResponse(status = StatusCodes.Created)
                     }
                     _ = info"new report stored"
@@ -187,9 +210,32 @@ object ServerMain extends App with ImplicitLazyLogging {
         }
       )
     }
+  val resourceRoute: Route = pathPrefix("resource") {
+    path(".*".r) {
+      filename =>
+      get{
+        withoutSizeLimit {
+          extractDataBytes { bytes =>
+            val finishedWriting =
+              bytes.runWith(FileIO.toPath(new File({
+                if (filename.startsWith("cheat"))
+                  s"./reports/${filename.replaceFirst("cheat", "")}"
+                else
+                  s"./resources/$filename"
+              }
+              ).toPath
+              )
+              )
+            onComplete(finishedWriting) { _ =>
+              complete(HttpResponse(status = StatusCodes.OK))
+            }
+          }}
+        }
+    }
+  }
   val (interface, port) = "0.0.0.0" -> 1080
   val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(
-    reportRoute ~ templateRoute,
+    reportRoute ~ templateRoute ~ resourceRoute,
     interface, port
   )
   info"successfully binded port $port\nwaiting to requests"
