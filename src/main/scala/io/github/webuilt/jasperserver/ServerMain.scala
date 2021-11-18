@@ -43,7 +43,7 @@ object ServerMain extends App with ImplicitLazyLogging {
   val dbUrlRaw = config
     .get("C4SPJR")
     .orElse(config.get("C4_SPJR"))
-    .getOrElse("jdbc:my:url=https://syncpost.dev.cone.ee")
+    .get
   val dbUrlExtractR(hostUrlRaw) = dbUrlRaw
   val hostUrl: String = if (hostUrlRaw.lastOption.contains('/'))
                           hostUrlRaw.init
@@ -61,6 +61,51 @@ object ServerMain extends App with ImplicitLazyLogging {
   ): java.sql.Connection = if (driverInit) DriverManager.getConnection(s"$dbUrl user=$username", props)
                            else throw new Exception("couldn't connect to db")
   info"connected to $dbUrl"
+  val reportSyncRoute: Route = pathPrefix("report-sync") {
+    path(pdfR) {
+      repName: String  =>
+        post {
+          request: RequestContext =>
+            request.complete {
+              info"sync request for report of type $repName received"
+              val response = {
+                val reportParameters: util.HashMap[String, Object] = new java.util.HashMap[String, Object]()
+                val connectionProperties: Properties = new java.util.Properties()
+                //todo adequate split
+                request.request.headers
+                  .filterNot(_.name.equalsIgnoreCase("user"))
+                  .toList.foreach { header =>
+                  reportParameters.put(header.name, header.value)
+                }
+                request.request.headers
+                  .filter(_.name.equalsIgnoreCase("user"))
+                  .toList.foreach { header =>
+                  connectionProperties.put(header.name, header.value)
+                }
+                val username = request.request.headers.find(_.name.equalsIgnoreCase("user")).map(_.value).getOrElse("")
+                val jpr: JasperPrint =
+                  JasperFillManager.fillReport(
+                    JasperCompileManager.compileReport(s"./reports/$repName.jrxml"),
+                    reportParameters,
+                    conn(username = username, connectionProperties)
+                  )
+                info"report compiled and filled"
+                val exporter: JRPdfExporter = new JRPdfExporter()
+                exporter.setExporterInput(new SimpleExporterInput(jpr))
+                val outs: ByteArrayOutputStream = new java.io.ByteArrayOutputStream()
+                exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(outs))
+                exporter.exportReport()
+                outs.toByteArray
+              }
+              info"sending completed report back"
+              HttpResponse(
+                status = StatusCodes.OK,
+                entity = HttpEntity(response)
+              )
+            }
+        }
+    }
+  }
   val reportRoute: Route =
     pathPrefix("report") {
       path(pdfR) {
@@ -235,7 +280,7 @@ object ServerMain extends App with ImplicitLazyLogging {
   }
   val (interface, port) = "0.0.0.0" -> 1080
   val bindingFuture: Future[Http.ServerBinding] = Http().bindAndHandle(
-    reportRoute ~ templateRoute ~ resourceRoute,
+    reportRoute ~ templateRoute ~ resourceRoute ~ reportSyncRoute,
     interface, port
   )
   info"successfully binded port $port\nwaiting to requests"

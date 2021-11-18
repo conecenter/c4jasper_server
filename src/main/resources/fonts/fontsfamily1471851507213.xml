@@ -22,6 +22,17 @@
     </exportFonts>
   </fontFamily>
 
+  <fontFamily name="Arial_H">
+    <normal>fonts/Arial/arial.ttf</normal>
+    <bold>fonts/Arial/arialbd.ttf</bold>
+    <italic>fonts/Arial/ariali.ttf</italic>
+    <boldItalic>fonts/Arial/arialbi.ttf</boldItalic>
+    <pdfEncoding>Identity-H</pdfEncoding>
+    <pdfEmbedded>true</pdfEmbedded>
+    <exportFonts>
+    </exportFonts>
+  </fontFamily>
+
   <fontFamily name="Times New Roman">
     <normal>fonts/TimesNewRoman/times.ttf</normal>
     <bold>fonts/TimesNewRoman/timesbd.ttf</bold>
