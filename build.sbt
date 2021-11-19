@@ -2,7 +2,7 @@ name := "jasper-server"
 
 version := "0.1"
 
-scalaVersion := "2.13.1"
+scalaVersion := "2.13.0"
 
 // https://mvnrepository.com/artifact/com.lowagie/itext
 libraryDependencies += "com.lowagie" % "itext" % "2.1.7"
