@@ -274,8 +274,9 @@ object ServerMain extends App with ImplicitLazyLogging {
             onComplete(finishedWriting) { _ =>
               complete(HttpResponse(status = StatusCodes.OK))
             }
-          }}
+          }
         }
+      }
     }
   }
   val (interface, port) = "0.0.0.0" -> 1080
@@ -284,8 +285,9 @@ object ServerMain extends App with ImplicitLazyLogging {
     interface, port
   )
   info"successfully binded port $port\nwaiting to requests"
-  // while (true) () //todo stop possibility
-  StdIn.readLine()
+  while (true) ()
+  info"unbinding"
+  //  StdIn.readLine()
   bindingFuture
     .flatMap(_.unbind()) // trigger unbinding from the port
     .onComplete(_ => system.terminate()) // and shutdown when done
